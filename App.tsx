@@ -20,7 +20,7 @@ const App: React.FC = () => {
             const ANIMATION_SCROLL_RANGE = window.innerHeight * 0.6; // Animate over 60% of viewport height
             const scrollY = window.scrollY;
             const progress = Math.min(1, scrollY / ANIMATION_SCROLL_RANGE);
-            
+
             if (appShellRef.current) {
                 appShellRef.current.style.setProperty('--scroll-progress', progress.toString());
             }
@@ -50,6 +50,11 @@ const App: React.FC = () => {
     };
 
     const handleSubmit = async (submittedUrl: string) => {
+        const ANIMATION_SCROLL_RANGE = window.innerHeight * 0.6;
+        if (window.scrollY < ANIMATION_SCROLL_RANGE) {
+            window.scrollTo({ top: ANIMATION_SCROLL_RANGE + 50, behavior: 'smooth' });
+        }
+
         resetState();
         setIsLoading(true);
 
@@ -60,7 +65,7 @@ const App: React.FC = () => {
             }
             setPanoId(extractedPanoId);
             setMapCoords(coords);
-            
+
             const resolutions = getAvailableResolutions();
             setAvailableResolutions(resolutions);
 
@@ -69,7 +74,7 @@ const App: React.FC = () => {
                 const imageUrl = await stitchStreetViewImage(extractedPanoId, defaultRes.zoom, handleViewerProgress);
                 setViewerImageUrl(imageUrl);
             } else {
-                 throw new Error("No valid resolutions could be determined.");
+                throw new Error("No valid resolutions could be determined.");
             }
         } catch (err) {
             if (err instanceof Error) {
@@ -103,7 +108,7 @@ const App: React.FC = () => {
                         <URLInput onSubmit={handleSubmit} isLoading={isLoading} />
                     </div>
                 </div>
-                
+
                 <div className="image-display-wrapper">
                     <ImageDisplay
                         isLoading={isLoading}
