@@ -36,6 +36,8 @@ export const PanoViewer: React.FC<PanoViewerProps> = ({ imageUrl }) => {
             compass: false,
             showControls: true,
             hfov: 100,
+            minHfov: 10,
+            maxHfov: 170,
             pitch: 0,
             yaw: 0,
         });
@@ -49,8 +51,16 @@ export const PanoViewer: React.FC<PanoViewerProps> = ({ imageUrl }) => {
         viewer.on('mouseup', syncControls);
         viewer.on('touchend', syncControls);
         viewer.on('animatefinished', syncControls);
+        viewer.on('zoomchange', syncControls);
+
+        const handleResize = () => {
+            viewer.resize();
+        };
+
+        window.addEventListener('resize', handleResize);
 
         return () => {
+            window.removeEventListener('resize', handleResize);
             if (viewerRef.current) {
                 viewer.destroy();
                 viewerRef.current = null;
