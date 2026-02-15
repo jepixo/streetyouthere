@@ -1,0 +1,5 @@
+{
+  "name": "Street You There",
+  "description": "Street You There is a web application that takes a Google Street View URL, fetches panoramic image tiles, stitches them into a high-resolution 360° image, and allows the user to download it.",
+  "requestFramePermissions": []
+}
