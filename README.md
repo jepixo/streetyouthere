@@ -1,6 +1,6 @@
 # Street You There
 
-Street You There is a powerful web application built with React and TypeScript that allows you to download high-resolution, 360° panoramic images directly from Google Street View.
+[Street You There](https://jepixo.github.io/streetyouthere/) is a powerful web application built with React and TypeScript that allows you to download high-resolution, 360° panoramic images directly from Google Street View.
 
 ## Features
 
