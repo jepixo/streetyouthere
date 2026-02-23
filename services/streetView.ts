@@ -120,16 +120,21 @@ const isTileBlack = (img: HTMLImageElement): boolean => {
     if (!ctx) return false;
 
     ctx.drawImage(img, 0, 0);
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
 
-    let isBlack = true;
-    for (let i = 0; i < imageData.length; i += 4 * 10) {
-        if (imageData[i] > 15 || imageData[i + 1] > 15 || imageData[i + 2] > 15) {
-            isBlack = false;
-            break;
+    let nonBlackCount = 0;
+    const thresh = 25;
+    let checkedPixels = 0;
+
+    for (let i = 0; i < data.length; i += 4 * 16) {
+        checkedPixels++;
+        if (data[i] > thresh || data[i + 1] > thresh || data[i + 2] > thresh) {
+            nonBlackCount++;
         }
     }
-    return isBlack;
+
+    // Allow up to 2% non-black pixels (e.g. watermarks or noise)
+    return (nonBlackCount / checkedPixels) < 0.02;
 };
 
 /**
@@ -144,22 +149,34 @@ const cropBlackEdges = (canvas: HTMLCanvasElement): HTMLCanvasElement => {
     const height = canvas.height;
 
     let top = 0, bottom = height - 1, left = 0, right = width - 1;
-    const thresh = 15;
+    const thresh = 25;
 
     const isRowBlack = (y: number) => {
         const data = ctx.getImageData(0, y, width, 1).data;
-        for (let i = 0; i < data.length; i += 4 * 2) {
-            if (data[i] > thresh || data[i + 1] > thresh || data[i + 2] > thresh) return false;
+        let nonBlack = 0;
+        let checked = 0;
+        for (let i = 0; i < data.length; i += 4 * 4) {
+            checked++;
+            if (data[i] > thresh || data[i + 1] > thresh || data[i + 2] > thresh) {
+                nonBlack++;
+                if (nonBlack / (width / 4) > 0.05) return false; // Early exit if clearly not black
+            }
         }
-        return true;
+        return (nonBlack / checked) < 0.02; // Tolerate up to 2% noise
     };
 
     const isColBlack = (x: number) => {
         const data = ctx.getImageData(x, 0, 1, height).data;
-        for (let i = 0; i < data.length; i += 4 * 2) {
-            if (data[i] > thresh || data[i + 1] > thresh || data[i + 2] > thresh) return false;
+        let nonBlack = 0;
+        let checked = 0;
+        for (let i = 0; i < data.length; i += 4 * 4) {
+            checked++;
+            if (data[i] > thresh || data[i + 1] > thresh || data[i + 2] > thresh) {
+                nonBlack++;
+                if (nonBlack / (height / 4) > 0.05) return false; // Early exit if clearly not black
+            }
         }
-        return true;
+        return (nonBlack / checked) < 0.02; // Tolerate up to 2% noise
     };
 
     // Fast scanning to find true borders
@@ -187,6 +204,82 @@ const cropBlackEdges = (canvas: HTMLCanvasElement): HTMLCanvasElement => {
         cctx.drawImage(canvas, left, top, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
         return cropped;
     }
+    return canvas;
+};
+
+/**
+ * Detects if the right side of the panorama is a repeat of the left side (wrapping).
+ * If a horizontal wrap is detected, crops the repeating right segment.
+ */
+const removeHorizontalWrap = (canvas: HTMLCanvasElement): HTMLCanvasElement => {
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return canvas;
+
+    const width = canvas.width;
+    const height = canvas.height;
+
+    const W = 16;
+
+    // Sample vertically from 30% to 70% to avoid sky/ground artifacts and watermarks
+    const startY = Math.floor(height * 0.3);
+    const scanHeight = Math.floor(height * 0.4);
+
+    if (scanHeight <= 0 || width < 512) return canvas;
+
+    const sourceData = ctx.getImageData(0, startY, W, scanHeight).data;
+
+    const startX = Math.floor(width * 0.25); // Some panos wrap earlier than 40% if very narrow
+    const searchWidth = width - startX;
+
+    if (searchWidth <= W) return canvas;
+
+    const searchArea = ctx.getImageData(startX, startY, searchWidth, scanHeight).data;
+
+    let bestMatchX = -1;
+    let minDiff = Infinity;
+
+    // Scan every 2 pixels to save time without missing the wrap
+    for (let dx = 0; dx < searchWidth - W; dx += 2) {
+        let totalDiff = 0;
+        let pixelsChecked = 0;
+
+        // Stride vertically by 8 to speed up
+        for (let y = 0; y < scanHeight; y += 8) {
+            for (let wx = 0; wx < W; wx += 4) { // check every 4th pixel horizontally
+                const srcIdx = (y * W + wx) * 4;
+                const searchIdx = (y * searchWidth + (dx + wx)) * 4;
+
+                totalDiff += Math.abs(sourceData[srcIdx] - searchArea[searchIdx]);
+                totalDiff += Math.abs(sourceData[srcIdx + 1] - searchArea[searchIdx + 1]);
+                totalDiff += Math.abs(sourceData[srcIdx + 2] - searchArea[searchIdx + 2]);
+                pixelsChecked++;
+            }
+        }
+
+        const avgDiff = totalDiff / (pixelsChecked * 3);
+        if (avgDiff < minDiff) {
+            minDiff = avgDiff;
+            bestMatchX = startX + dx;
+        }
+
+        if (avgDiff < 8) { // Strict visual match threshold
+            bestMatchX = startX + dx;
+            break;
+        }
+    }
+
+    // Only crop if the match is genuinely strong (average pixel difference < 15)
+    if (bestMatchX !== -1 && minDiff < 15) {
+        const cropped = document.createElement('canvas');
+        cropped.width = bestMatchX;
+        cropped.height = height;
+        const cctx = cropped.getContext('2d');
+        if (cctx) {
+            cctx.drawImage(canvas, 0, 0, bestMatchX, height, 0, 0, bestMatchX, height);
+            return cropped;
+        }
+    }
+
     return canvas;
 };
 
@@ -221,23 +314,6 @@ export const stitchStreetViewImage = async (
 
     // Store loaded images
     const images: { [key: string]: HTMLImageElement | null } = {};
-    const hashes: { [key: string]: string } = {};
-
-    const getTileHash = (img: HTMLImageElement): string => {
-        const hCanvas = document.createElement('canvas');
-        hCanvas.width = img.width;
-        hCanvas.height = 1;
-        const hCtx = hCanvas.getContext('2d', { willReadFrequently: true });
-        if (!hCtx) return '';
-        hCtx.drawImage(img, 0, -Math.floor(img.height / 2));
-        const data = hCtx.getImageData(0, 0, img.width, 1).data;
-        let hash = 0;
-        for (let i = 0; i < data.length; i += 4) {
-            hash = ((hash << 5) - hash) + data[i] + data[i + 1] + data[i + 2];
-            hash = hash & hash;
-        }
-        return hash.toString();
-    };
 
     const processTile = async (coord: { x: number; y: number }) => {
         const tileUrl = `https://streetviewpixels-pa.googleapis.com/v1/tile?cb_client=maps_sv.tactile&panoid=${panoId}&x=${coord.x}&y=${coord.y}&zoom=${zoom}&nbt=1&fover=2`;
@@ -246,7 +322,6 @@ export const stitchStreetViewImage = async (
             const isBlack = isTileBlack(img);
             if (!isBlack) {
                 images[`${coord.x},${coord.y}`] = img;
-                hashes[`${coord.x},${coord.y}`] = getTileHash(img);
             } else {
                 images[`${coord.x},${coord.y}`] = null;
             }
@@ -271,38 +346,7 @@ export const stitchStreetViewImage = async (
 
     await Promise.all(workers);
 
-    // Detect wrapping width horizontally to eliminate repeating tiles
-    let actualCols = grid.x;
-    for (let repeatX = 1; repeatX < grid.x; repeatX++) {
-        let isMatch = true;
-        let hasValidTile = false;
-
-        for (let y = 0; y < grid.y; y++) {
-            const hashRepeat = hashes[`${repeatX},${y}`];
-            const hashOriginal = hashes[`0,${y}`];
-
-            if (hashRepeat && hashOriginal) {
-                hasValidTile = true;
-                if (hashRepeat !== hashOriginal) {
-                    isMatch = false;
-                    break;
-                }
-            } else if (!hashRepeat && !hashOriginal) {
-                // Both missing/black matches
-            } else {
-                // One missing and the other available
-                isMatch = false;
-                break;
-            }
-        }
-
-        if (isMatch && hasValidTile) {
-            actualCols = repeatX;
-            break;
-        }
-    }
-
-    const canvasWidth = actualCols * TILE_SIZE;
+    const canvasWidth = grid.x * TILE_SIZE;
     const canvasHeight = grid.y * TILE_SIZE;
 
     const canvas = document.createElement('canvas');
@@ -317,7 +361,7 @@ export const stitchStreetViewImage = async (
     ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
     for (let y = 0; y < grid.y; y++) {
-        for (let x = 0; x < actualCols; x++) {
+        for (let x = 0; x < grid.x; x++) {
             const img = images[`${x},${y}`];
             if (img) {
                 ctx.drawImage(img, x * TILE_SIZE, y * TILE_SIZE);
@@ -328,5 +372,8 @@ export const stitchStreetViewImage = async (
     // Crop continuous black padding at a pixel level exactly
     const croppedCanvas = cropBlackEdges(canvas);
 
-    return croppedCanvas.toDataURL('image/jpeg', 0.95);
+    // Detect and remove pixel-perfect horizontal duplication wrapping
+    const finalCanvas = removeHorizontalWrap(croppedCanvas);
+
+    return finalCanvas.toDataURL('image/jpeg', 0.95);
 };
