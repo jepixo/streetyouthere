@@ -15,9 +15,12 @@ const App: React.FC = () => {
     const [mapCoords, setMapCoords] = useState<{ lat: number, lng: number } | null>(null);
     const appShellRef = useRef<HTMLDivElement>(null);
 
+    // Cache the initial viewport height so mobile address bar hiding doesn't jitter the scroll math
+    const baseHeightRef = useRef<number>(window.innerHeight);
+
     useEffect(() => {
         const handleScroll = () => {
-            const ANIMATION_SCROLL_RANGE = window.innerHeight * 0.6; // Animate over 60% of viewport height
+            const ANIMATION_SCROLL_RANGE = baseHeightRef.current * 0.6; // Animate over 60% of viewport height
             const scrollY = window.scrollY;
             const progress = Math.min(1, scrollY / ANIMATION_SCROLL_RANGE);
 
@@ -50,7 +53,7 @@ const App: React.FC = () => {
     };
 
     const handleSubmit = async (submittedUrl: string) => {
-        const ANIMATION_SCROLL_RANGE = window.innerHeight * 0.6;
+        const ANIMATION_SCROLL_RANGE = baseHeightRef.current * 0.6;
         if (window.scrollY < ANIMATION_SCROLL_RANGE) {
             window.scrollTo({ top: ANIMATION_SCROLL_RANGE + 50, behavior: 'smooth' });
         }
@@ -119,6 +122,10 @@ const App: React.FC = () => {
                         resolutions={availableResolutions}
                         onStitchRequest={handleStitchRequest}
                     />
+                </div>
+
+                <div className="app-footer">
+                    Built by <a href="https://github.com/jepixo" target="_blank" rel="noopener noreferrer">@jepixo</a> • <a href="https://www.linkedin.com/in/jepixo" target="_blank" rel="noopener noreferrer">LinkedIn</a>
                 </div>
             </div>
         </>

@@ -49,10 +49,10 @@ body {
 /* Background Map */
 .background-map {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  top: -10vh;
+  left: -10vw;
+  width: 120vw;
+  height: 120vh;
   z-index: 1;
   filter: saturate(1.1);
 }
@@ -86,7 +86,7 @@ body {
   /* Gradual interpolation using CSS variables */
   --width: calc(680px * (1 - var(--scroll-progress)) + 95vw * var(--scroll-progress));
   --height: calc(380px * (1 - var(--scroll-progress)) + 92vh * var(--scroll-progress));
-  --padding: calc(3rem * (1 - var(--scroll-progress)) + 1.5rem * var(--scroll-progress));
+  --padding: calc(1.6rem * (1 - var(--scroll-progress)) + 1.5rem * var(--scroll-progress));
   --radius: calc(2rem * (1 - var(--scroll-progress)) + 1rem * var(--scroll-progress));
 
   width: var(--width);
@@ -577,6 +577,27 @@ body {
   border: 1px solid var(--border-color);
 }
 
+/* Footer Branding */
+.app-footer {
+  /* text-align: center; */
+  font-size: 0.8rem;
+  color: var(--accent-secondary);
+  margin-top: auto;
+  opacity: 1;
+  transition: color 0.2s ease;
+}
+
+.app-footer a {
+  color: inherit;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.app-footer a:hover {
+  color: var(--accent-primary);
+  text-decoration: underline;
+}
+
 /* ==========================================================================
    Responsive Design for Tablets and Mobile
    ========================================================================== */
@@ -585,15 +606,15 @@ body {
   /* Make the initial state more mobile friendly */
   .app-shell {
     --width: calc(90vw * (1 - var(--scroll-progress)) + 95vw * var(--scroll-progress));
-    --height: calc(450px * (1 - var(--scroll-progress)) + 90vh * var(--scroll-progress));
-    --padding: calc(2rem * (1 - var(--scroll-progress)) + 1rem * var(--scroll-progress));
+    --height: calc(300px * (1 - var(--scroll-progress)) + 95vh * var(--scroll-progress));
+    --padding: calc(1.2rem * (1 - var(--scroll-progress)) + 1rem * var(--scroll-progress));
     /* Less margin on mobile to ensure it fits locally */
-    margin: 20vh auto 0;
+    margin: 5vh auto 0;
   }
 
   .app-header {
     /* Give more vertical space for stacked elements in the final state */
-    height: calc(60% * (1 - var(--scroll-progress)) + 160px * var(--scroll-progress));
+    height: calc(45% * (1 - var(--scroll-progress)) + 140px * var(--scroll-progress));
   }
 
   /* --- Mobile Animation Overrides --- */
@@ -604,8 +625,8 @@ body {
     width: 100%;
 
     /* Animate position from center-top to TOP of the card */
-    /* Start: 40% (center), End: 50px (top header) */
-    top: calc(40% * (1 - var(--scroll-progress)) + 50px * var(--scroll-progress));
+    /* Start: 30% (center), End: 40px (top header) */
+    top: calc(30% * (1 - var(--scroll-progress)) + 40px * var(--scroll-progress));
     left: 50%;
     /* Stays at 50% */
     transform: translate(-50%, -50%);
@@ -614,11 +635,11 @@ body {
 
   .url-input-container {
     /* Keep width at 100% */
-    width: 95%;
+    width: 90%;
 
     /* Animate position from center-bottom to below the title */
-    /* Start: 80% (bottom), End: 140px (below title) */
-    top: calc(80% * (1 - var(--scroll-progress)) + 140px * var(--scroll-progress));
+    /* Start: 65% (bottom), End: 110px (below title) */
+    top: calc(75% * (1 - var(--scroll-progress)) + 110px * var(--scroll-progress));
     left: 50%;
     /* Stays at 50% */
     transform: translate(-50%, -50%);
@@ -628,23 +649,28 @@ body {
 
   /* Adjust font sizes for smaller screens */
   .hero-title {
-    --start-size: 3rem;
-    --end-size: 2.2rem;
+    --start-size: 2rem;
+    --end-size: 1.5rem;
+    white-space: normal;
+    line-height: 1.1;
   }
 
   .hero-description {
-    --start-font: 1rem;
-    --end-font: 0.875rem;
+    --start-font: 0.95rem;
+    --end-font: 0.85rem;
+    margin: calc(0.5rem * (1 - var(--scroll-progress))) auto calc(1rem * (1 - var(--scroll-progress)));
   }
 
   .url-input-field {
-    padding: 0.875rem 7.5rem 0.875rem 3rem;
+    padding: 0.75rem 6.5rem 0.75rem 2.5rem;
+    font-size: 0.95rem;
 
   }
 
   .url-input-button {
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
+    padding: 0.5rem 0.8rem;
+    font-size: 0.85rem;
+    right: 0.4rem;
   }
 
   /* Stack resolution items vertically on mobile to prevent overflow */
@@ -668,5 +694,25 @@ body {
   .control-slider span {
     width: 60px;
     margin: 0 auto;
+  }
+  /* Footer Branding */
+  .app-footer {
+    /* text-align: center; */
+    font-size: 0.8rem;
+    color: var(--accent-secondary);
+    margin-top: auto;
+    opacity: 1;
+    transition: color 0.2s ease;
+  }
+
+  .app-footer a {
+    color: inherit;
+    font-weight: 500;
+    text-decoration: none;
+  }
+
+  .app-footer a:hover {
+    color: var(--accent-primary);
+    text-decoration: underline;
   }
 }
